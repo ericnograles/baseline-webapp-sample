@@ -1,0 +1,47 @@
+version: '3'
+services:
+  app_postgres:
+    container_name: baseline_webapp_sample_postgres
+    image: "mdillon/postgis"
+    ports:
+      - 59000:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=baseline_webapp_sample
+  app_redis:
+    container_name: baseline_webapp_sample_redis
+    image: redis:3.2
+    ports:
+      - 59001:6379
+  app:
+    container_name: baseline_webapp_sample
+    build: .
+    volumes:
+      - ./.env:/app/.env
+      - ./index.js:/app/index.js
+      - ./package.json:/app/package.json
+      - ./api:/app/api
+      - ./public:/app/public
+      - ./src:/app/src
+      - ./build:/app/build
+    depends_on:
+      - app_postgres
+      - app_redis
+    links:
+      - app_postgres
+      - app_redis
+    ports:
+      - 59004:3000 # React Development Server
+      - 59002:3001 # Web API
+      - 59003:5858 # Debugging port for Web API
+      - 59005:3002 # Swagger Project Editor
+    environment:
+      DATABASE_URL: postgres://postgres:password@app_postgres:5432/baseline_webapp_sample
+      POSTGRES_LOGGING: "true" # Logs out every query that Postgres runs through Sequelize
+      RECREATE_SCHEMA: "true" # Nukes the database on every refresh
+      REDIS_URL: redis://app_redis:6379
+      AUTH_SAML_ENABLED: "false"
+      AUTH_SALESFORCE_ENABLED: "false"
+    command: ["node", "docker.js"]
+    restart: always
